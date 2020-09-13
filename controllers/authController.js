@@ -38,19 +38,15 @@ exports.login = catchAsync( async (req, res, next) => {
 
 exports.register = catchAsync( async (req, res, next) => {
   const {username, email, password} = req.body
-  console.log({username, email, password})
 
   const isUsernameTaken = await User.findOne({ username })
   if (isUsernameTaken) {
     return next(new AppError('Username is taken', 409))
   }
-  console.log(isUsernameTaken)
-
   const isEmailTaken = await User.findOne({ email })
   if (isEmailTaken) {
     return next(new AppError('Email is taken', 409))
   }
-  console.log(isEmailTaken)
 
     const newUser = await User.create({
       username, email, password 
@@ -62,7 +58,6 @@ exports.register = catchAsync( async (req, res, next) => {
 })
 
 exports.isLoggedIn = catchAsync (async(req, res, next) => {
-  console.log(req.headers)
   const token = req.headers.authorization.split(' ')[1] // starts with 'Bearer'
 
   if (!token) {
@@ -73,7 +68,6 @@ exports.isLoggedIn = catchAsync (async(req, res, next) => {
 
   await jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
     if (err) {
-      console.log(err)
       return next(new AppError('Unauthorizerd', 401))
     }
     decodedId = decoded.id
