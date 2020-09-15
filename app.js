@@ -4,7 +4,9 @@ const cors = require('cors')
 
 const AppError = require('./utils/appError')
 const globalErrorHandler = require('./controllers/errorController')
+
 const authRouter = require('./routes/authRouter')
+const userRouter = require('./routes/userRouter')
 
 
 const app = express()
@@ -23,6 +25,7 @@ app.get('/', (req, res) => {
 })
 
 app.use('/api/auth', authRouter)
+app.use('/api/user', userRouter)
 
 // app.all('*', (req, res, next) => {
 //   next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404))

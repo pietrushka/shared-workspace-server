@@ -58,7 +58,16 @@ exports.register = catchAsync( async (req, res, next) => {
 })
 
 exports.isLoggedIn = catchAsync (async(req, res, next) => {
-  const token = req.headers.authorization.split(' ')[1] // starts with 'Bearer'
+  // Check where is the token and get it
+  let token;
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer')
+  ) {
+    token = req.headers.authorization.split(' ')[1];
+  } else if (req.cookies.jwt) {
+    token = req.cookies.jwt
+  }
 
   if (!token) {
     return next(new AppError('No token provided!', 403))
@@ -86,4 +95,64 @@ exports.isLoggedIn = catchAsync (async(req, res, next) => {
   })
 
   next()
+})
+
+exports.protect = catchAsync(async (req, res, next) => {
+  // Check where is the token and get it
+  let token;
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer')
+  ) {
+    token = req.headers.authorization.split(' ')[1];
+  } else if (req.cookies.jwt) {
+    token = req.cookies.jwt
+  }
+
+  if (!token) { 
+    return next(
+      new AppError('No token provided!', 403)
+    )
+  }
+
+  // Verify token
+  const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
+
+  const currentUser = await User.findById(decoded.id);
+  
+  // 3) Check user exists
+  if (!currentUser) {
+    return next(
+      new AppError(
+        'The user belonging to this token does no longer exist.',
+        401
+      )
+    )
+  }
+  
+  // Give access to protected route
+  req.body.userId = currentUser.id
+  next();
+})
+
+exports.updatePassword = catchAsync(async (req, res, next) => {
+
+  // 1) Get user from collection
+  const {userId, newPassword, currentPassword} = req.body
+  const user = await User.findById(userId).select('+password');
+
+  const checkPassword = await user.correctPassword(currentPassword, user.password)
+
+  // Check if POSTed password is correct
+  if (!(await user.correctPassword(currentPassword, user.password))) {
+    return next(new AppError('Your current password is wrong.', 401));
+  }
+
+  // Update password
+  user.password = newPassword;
+  await user.save();
+
+  res.status(200).json({
+    status: 'success'
+  });
 })
