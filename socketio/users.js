@@ -1,9 +1,9 @@
 const users = []
 
-const addUser = ({socketId, user, roomId}) => {
+const addUser = ({ socketId, user, roomId }) => {
   const userData = {
     socketId,
-    user, 
+    user,
     roomId
   }
 
@@ -16,7 +16,14 @@ const addUser = ({socketId, user, roomId}) => {
 
 const getUser = (socketId) => users.find((user) => user.socketId === socketId)
 
+const removeUser = socketId => {
+  const userToDelete = users.find(user => user.socketId === socketId)
+  const userIndex = users.indexOf(userToDelete)
+  users.splice(userIndex, 1)
+}
+
 module.exports = {
   addUser,
-  getUser
+  getUser,
+  removeUser
 }

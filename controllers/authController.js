@@ -6,12 +6,11 @@ const User = require('./../models/userModel')
 const catchAsync = require('./../utils/catchAsync')
 const AppError = require('./../utils/appError')
 
-
 const signToken = id => {
   return jwt.sign({ id }, process.env.JWT_SECRET)
 }
 
-exports.login = catchAsync( async (req, res, next) => {
+exports.login = catchAsync(async (req, res, next) => {
   const { email, password } = req.body
 
   // 1) Check if email and password exist
@@ -27,17 +26,16 @@ exports.login = catchAsync( async (req, res, next) => {
 
   const token = signToken(user._id)
 
-
-  //3 If everything is ok, send user data and token
+  // 3 If everything is ok, send user data and token
   res.status(200).send({
     id: user._id,
     username: user.username,
-    token,
+    token
   })
 })
 
-exports.register = catchAsync( async (req, res, next) => {
-  const {username, email, password} = req.body
+exports.register = catchAsync(async (req, res, next) => {
+  const { username, email, password } = req.body
 
   const isUsernameTaken = await User.findOne({ username })
   if (isUsernameTaken) {
@@ -48,23 +46,23 @@ exports.register = catchAsync( async (req, res, next) => {
     return next(new AppError('Email is taken', 409))
   }
 
-    const newUser = await User.create({
-      username, email, password 
-    })
+  const newUser = await User.create({
+    username, email, password
+  })
 
-    res.status(201).send({
-      newUser
-    })
+  res.status(201).send({
+    newUser
+  })
 })
 
-exports.isLoggedIn = catchAsync (async(req, res, next) => {
+exports.isLoggedIn = catchAsync(async (req, res, next) => {
   // Check where is the token and get it
-  let token;
+  let token
   if (
     req.headers.authorization &&
     req.headers.authorization.startsWith('Bearer')
   ) {
-    token = req.headers.authorization.split(' ')[1];
+    token = req.headers.authorization.split(' ')[1]
   } else if (req.cookies.jwt) {
     token = req.cookies.jwt
   }
@@ -80,9 +78,9 @@ exports.isLoggedIn = catchAsync (async(req, res, next) => {
       return next(new AppError('Unauthorizerd', 401))
     }
     decodedId = decoded.id
-  }) 
+  })
 
-  //3) Check if user still exists
+  // 3) Check if user still exists
   const currentUser = await User.findById(decodedId)
 
   if (!currentUser) {
@@ -91,7 +89,7 @@ exports.isLoggedIn = catchAsync (async(req, res, next) => {
 
   res.status(200).send({
     id: currentUser._id,
-    username: currentUser.username,
+    username: currentUser.username
   })
 
   next()
@@ -99,27 +97,27 @@ exports.isLoggedIn = catchAsync (async(req, res, next) => {
 
 exports.protect = catchAsync(async (req, res, next) => {
   // Check where is the token and get it
-  let token;
+  let token
   if (
     req.headers.authorization &&
     req.headers.authorization.startsWith('Bearer')
   ) {
-    token = req.headers.authorization.split(' ')[1];
+    token = req.headers.authorization.split(' ')[1]
   } else if (req.cookies.jwt) {
     token = req.cookies.jwt
   }
 
-  if (!token) { 
+  if (!token) {
     return next(
       new AppError('No token provided!', 403)
     )
   }
 
   // Verify token
-  const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
+  const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET)
 
-  const currentUser = await User.findById(decoded.id);
-  
+  const currentUser = await User.findById(decoded.id)
+
   // 3) Check user exists
   if (!currentUser) {
     return next(
@@ -129,30 +127,29 @@ exports.protect = catchAsync(async (req, res, next) => {
       )
     )
   }
-  
+
   // Give access to protected route
   req.body.userId = currentUser.id
-  next();
+  next()
 })
 
 exports.updatePassword = catchAsync(async (req, res, next) => {
-
   // 1) Get user from collection
-  const {userId, newPassword, currentPassword} = req.body
-  const user = await User.findById(userId).select('+password');
+  const { userId, newPassword, currentPassword } = req.body
+  const user = await User.findById(userId).select('+password')
 
-  const checkPassword = await user.correctPassword(currentPassword, user.password)
+  await user.correctPassword(currentPassword, user.password)
 
   // Check if POSTed password is correct
   if (!(await user.correctPassword(currentPassword, user.password))) {
-    return next(new AppError('Your current password is wrong.', 401));
+    return next(new AppError('Your provided wrong current password', 401))
   }
 
   // Update password
-  user.password = newPassword;
-  await user.save();
+  user.password = newPassword
+  await user.save()
 
   res.status(200).json({
     status: 'success'
-  });
+  })
 })

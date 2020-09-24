@@ -14,10 +14,26 @@ const getDrawings = (roomId) => {
   return canvases[roomId]
 }
 
-
-
 module.exports = {
   makeCanvas,
   saveDrawing,
-  getDrawings,
+  getDrawings
 }
+
+// const rooms = []
+
+// [
+//   {
+//     roomId: id,
+//     users: [
+//   {
+//     userSocket: socketId,
+//     user: {
+//       username,
+//       id
+//     }
+//   }
+// ],
+//     canvas: [operations]
+//   }
+// ]
