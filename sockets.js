@@ -5,7 +5,8 @@ const addUserToRoom = ( socketId, user, roomId ) => {
     // create room
     rooms[roomId] = {
       users: [],
-      whiteboard: []
+      whiteboard: [],
+      messages: []
     }
   }
 
@@ -26,15 +27,25 @@ const removeUser = (roomId, socketId) => {
 
 module.exports = handleIo = (io) => {
   io.on('connection', socket => {
+    let username
     let currentRoomId
 
     socket.on('join', ({ user, roomId }) => {
+      if (user) {
+        username = user.username
+      } else {
+        username = socket.id
+      }
       currentRoomId = addUserToRoom(socket.id, user, roomId)
+
       socket.join(roomId)
 
-      //send drawings to user
+      //send drawings and messages to user
       rooms[roomId].whiteboard.map(drawingData => {
         socket.emit('drawing', drawingData)
+      })
+      rooms[roomId].messages.map(messageObj => {
+        socket.emit('message', messageObj)
       })
       console.log('user joined to room', roomId)
     })
@@ -45,9 +56,21 @@ module.exports = handleIo = (io) => {
 
       socket.to(currentRoomId).emit('drawing', data)
     })
+    
+    socket.on('message', (message) => {
+
+      const messageObj = {
+        author: username,
+        content: message
+      }
+
+      //save message
+      rooms[currentRoomId].messages.push(messageObj)
+      //// sending to all clients in currentRoomId, including sender
+      io.in(currentRoomId).emit('message', messageObj)
+    })
 
     socket.on('disconnect', function () {
-      console.log(socket.id)
       removeUser(currentRoomId, socket.id)
     })
   })
