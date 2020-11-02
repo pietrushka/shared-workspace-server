@@ -3,8 +3,7 @@ const mongoose = require('mongoose')
 const dotenv = require('dotenv')
 const socketio = require('socket.io')
 
-const { addUser, getUser, removeUser } = require('./socketio/users')
-const { makeCanvas, saveDrawing, getDrawings } = require('./socketio/actions')
+const handleIO = require('./sockets')
 
 dotenv.config({ path: './config.env' })
 const PORT = process.env.PORT || 4000
@@ -25,26 +24,6 @@ mongoose.set('useFindAndModify', false)
 
 const server = http.createServer(app)
 const io = socketio(server)
-
-io.on('connection', socket => {
-  socket.on('join', ({ user, roomId }) => {
-    addUser({ socketId: socket.id, user, roomId })
-    makeCanvas(roomId)
-    socket.join(roomId)
-    getDrawings(roomId).map(drawingData => {
-      socket.broadcast.emit('drawing', drawingData)
-    })
-  })
-
-  socket.on('drawing', (data) => {
-    const user = getUser(socket.id)
-    saveDrawing(user.roomId, data)
-    socket.to(user.roomId).emit('drawing', data)
-  })
-
-  socket.on('disconnect', function () {
-    removeUser(socket.id)
-  })
-})
+handleIO(io)
 
 server.listen(PORT, () => console.log('server runnin on port 4000'))
