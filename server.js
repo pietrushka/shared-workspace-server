@@ -5,7 +5,7 @@ const socketio = require('socket.io')
 
 const handleIO = require('./sockets')
 
-dotenv.config({ path: './config.env' })
+dotenv.config({ path: './.env' })
 const PORT = process.env.PORT || 4000
 
 const app = require('./app')
