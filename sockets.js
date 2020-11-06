@@ -44,7 +44,9 @@ module.exports = handleIo = (io) => {
       rooms[roomId].messages.map(messageObj => {
         socket.emit('message', messageObj)
       })
-      console.log('user joined to room')
+
+      const usersInRoom = rooms[roomId].users.filter(({socketId}) => socketId !== socket.id)
+      socket.emit('users-in-the-room', usersInRoom)
     })
 
     socket.on('drawing', (data) => {
@@ -54,6 +56,14 @@ module.exports = handleIo = (io) => {
 
       socket.to(currentRoomId).emit('drawing', data)
     })
+
+    socket.on("sending-signal", payload => {
+      io.to(payload.userToSignal).emit('user-joined', { signal: payload.signal, callerID: payload.callerID });
+    });
+
+    socket.on("returning-signal", payload => {
+      io.to(payload.callerID).emit('receiving-returned-signal', { signal: payload.signal, id: socket.id });
+    });
     
     socket.on('message', (message) => {
 
@@ -71,7 +81,6 @@ module.exports = handleIo = (io) => {
     })
 
     socket.on('disconnect', function () {
-      console.log('user disconnected')
       if (!!rooms[currentRoomId]) removeUser(currentRoomId, socket.id)
     })
   })
