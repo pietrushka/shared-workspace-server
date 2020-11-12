@@ -32,10 +32,22 @@ module.exports = handleIo = (io) => {
     socket.on('join', ({ user, roomId }) => {
       if (!user) return
 
+      if(rooms[roomId] && rooms[roomId].users.length > 1) {
+        socket.emit('room-full')
+        return
+      }
+
       username = user.username
       currentRoomId = addUserToRoom(socket.id, user, roomId)
 
       socket.join(roomId)
+
+      console.log(`${username} joined`)
+
+      if (rooms[roomId].users.length === 2) {
+        const partnerID = rooms[roomId].users.find(user => user.socketId !== socket.id)
+        socket.emit('partner-in-room-id', partnerID)
+      }
 
       //send drawings and messages to user
       rooms[roomId].whiteboard.map(drawingData => {
@@ -44,10 +56,16 @@ module.exports = handleIo = (io) => {
       rooms[roomId].messages.map(messageObj => {
         socket.emit('message', messageObj)
       })
-
-      const usersInRoom = rooms[roomId].users.filter(({socketId}) => socketId !== socket.id)
-      socket.emit('users-in-the-room', usersInRoom)
     })
+
+    socket.on('call-partner', ({partnerID, signal, callerID}) => {
+      io.to(partnerID).emit('incomming-call', {signal, callerID});
+    })
+
+    socket.on('returning-signal', ({callerID, signal}) => {
+      io.to(callerID).emit('receiving-returned-signal', {signal, id: socket.id})
+    })
+
 
     socket.on('drawing', (data) => {
       if (!!rooms[currentRoomId]) {
@@ -56,14 +74,6 @@ module.exports = handleIo = (io) => {
 
       socket.to(currentRoomId).emit('drawing', data)
     })
-
-    socket.on("sending-signal", payload => {
-      io.to(payload.userToSignal).emit('user-joined', { signal: payload.signal, callerID: payload.callerID });
-    });
-
-    socket.on("returning-signal", payload => {
-      io.to(payload.callerID).emit('receiving-returned-signal', { signal: payload.signal, id: socket.id });
-    });
     
     socket.on('message', (message) => {
 
@@ -81,6 +91,7 @@ module.exports = handleIo = (io) => {
     })
 
     socket.on('disconnect', function () {
+      socket.to(currentRoomId).emit('user-left', socket.id)
       if (!!rooms[currentRoomId]) removeUser(currentRoomId, socket.id)
     })
   })
